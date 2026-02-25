@@ -1,76 +1,67 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <string.h>
 #include "mymalloc.h"
 
-#define MEMLENGTH 4096 
+#define MEMLENGTH 4096
 
 static union {
     char bytes[MEMLENGTH];
     double not_used;
 } heap;
 
-typedef struct Chunk {
-    size_t size;
-    int is_allocated;
-} Chunk;
 
-static int initialized = 0; 
+#define HEADER_SIZE 8
+#define GET_SIZE(h)   (*(size_t *)(h) & ~(size_t)1)
+#define GET_ALLOC(h)  (*(size_t *)(h) & (size_t)1)
+#define SET_HEADER(h, sz, alloc) (*(size_t *)(h) = (sz) | (alloc))
 
-void detect_leaks() {
-    int leak_count = 0;
-    size_t leaked_bytes = 0;
-    char *curr = heap.bytes;
+static int initialized = 0;
 
-    while (curr < heap.bytes + MEMLENGTH) {
-        Chunk *header = (Chunk *)curr;
-        if (header->is_allocated) {
-            leak_count++;
-            leaked_bytes += header->size;
+static void leak_detect(void) {
+    int count = 0;
+    size_t total = 0;
+    char *p = heap.bytes;
+    while (p < heap.bytes + MEMLENGTH) {
+        if (GET_ALLOC(p)) {
+            count++;
+            total += GET_SIZE(p);
         }
-        curr += sizeof(Chunk) + header->size; 
+        p += HEADER_SIZE + GET_SIZE(p);
     }
-
-    if (leak_count > 0) {
-        fprintf(stderr, "mymalloc: %zu bytes leaked in %d objects.\n", leaked_bytes, leak_count);
+    if (count > 0) {
+        fprintf(stderr, "mymalloc: %zu bytes leaked in %d objects.\n", total, count);
     }
 }
 
-void initialize_heap() {
-    Chunk *first_chunk = (Chunk *)heap.bytes;
-    first_chunk->size = MEMLENGTH - sizeof(Chunk);
-    first_chunk->is_allocated = 0;
-
-    atexit(detect_leaks); 
+static void init_heap(void) {
+    SET_HEADER(heap.bytes, MEMLENGTH - HEADER_SIZE, 0);
     initialized = 1;
+    atexit(leak_detect);
 }
 
 void *mymalloc(size_t size, char *file, int line) {
-    if (!initialized) initialize_heap();
+    if (!initialized) init_heap();
 
     if (size == 0) return NULL;
 
-    size_t aligned_size = (size + 7) & ~7; 
+    size = (size + 7) & ~(size_t)7;
 
-    char *curr = heap.bytes;
-
-    while (curr < heap.bytes + MEMLENGTH) {
-        Chunk *header = (Chunk *)curr;
-
-        if (!header->is_allocated && header->size >= aligned_size) {
-            
-            if (header->size >= aligned_size + sizeof(Chunk) + 8) {
-                Chunk *next_chunk = (Chunk *)(curr + sizeof(Chunk) + aligned_size);
-                next_chunk->size = header->size - aligned_size - sizeof(Chunk);
-                next_chunk->is_allocated = 0;
-
-                header->size = aligned_size;
+    char *p = heap.bytes;
+    while (p < heap.bytes + MEMLENGTH) {
+        size_t csz = GET_SIZE(p);
+        int calloc = GET_ALLOC(p);
+        if (!calloc && csz >= size) {
+            if (csz >= size + HEADER_SIZE + 8) {
+                char *next = p + HEADER_SIZE + size;
+                SET_HEADER(next, csz - size - HEADER_SIZE, 0);
+                SET_HEADER(p, size, 1);
+            } else {
+                SET_HEADER(p, csz, 1);
             }
-
-            header->is_allocated = 1;
-            return curr + sizeof(Chunk);
+            return p + HEADER_SIZE;
         }
-        curr += sizeof(Chunk) + header->size;
+        p += HEADER_SIZE + csz;
     }
 
     fprintf(stderr, "malloc: Unable to allocate %zu bytes (%s:%d)\n", size, file, line);
@@ -78,44 +69,34 @@ void *mymalloc(size_t size, char *file, int line) {
 }
 
 void myfree(void *ptr, char *file, int line) {
-    if (!initialized) initialize_heap();
+    if (!initialized) init_heap();
 
-    if (ptr == NULL || (char *)ptr < heap.bytes || (char *)ptr >= heap.bytes + MEMLENGTH) {
+    if (ptr == NULL ||
+        (char *)ptr < heap.bytes + HEADER_SIZE ||
+        (char *)ptr >= heap.bytes + MEMLENGTH) {
         fprintf(stderr, "free: Inappropriate pointer (%s:%d)\n", file, line);
         exit(2);
     }
 
-    char *curr = heap.bytes;
-    Chunk *prev_chunk = NULL;
-
-    while (curr < heap.bytes + MEMLENGTH) {
-        Chunk *header = (Chunk *)curr;
-        void *payload = curr + sizeof(Chunk);
-
-        if (payload == ptr) {
-            if (!header->is_allocated) {
+    char *p = heap.bytes;
+    while (p < heap.bytes + MEMLENGTH) {
+        char *payload = p + HEADER_SIZE;
+        size_t csz = GET_SIZE(p);
+        if (payload == (char *)ptr) {
+            if (!GET_ALLOC(p)) {
                 fprintf(stderr, "free: Inappropriate pointer (%s:%d)\n", file, line);
                 exit(2);
             }
+            SET_HEADER(p, csz, 0);
 
-            header->is_allocated = 0;
-
-            char *next = curr + sizeof(Chunk) + header->size;
-            if (next < heap.bytes + MEMLENGTH) {
-                Chunk *next_header = (Chunk *)next;
-                if (!next_header->is_allocated) {
-                    header->size += sizeof(Chunk) + next_header->size;
-                }
-            }
-
-            if (prev_chunk != NULL && !prev_chunk->is_allocated) {
-                prev_chunk->size += sizeof(Chunk) + header->size;
+            char *next = p + HEADER_SIZE + GET_SIZE(p);
+            while (next < heap.bytes + MEMLENGTH && !GET_ALLOC(next)) {
+                SET_HEADER(p, GET_SIZE(p) + HEADER_SIZE + GET_SIZE(next), 0);
+                next = p + HEADER_SIZE + GET_SIZE(p);
             }
             return;
         }
-
-        prev_chunk = header;
-        curr += sizeof(Chunk) + header->size;
+        p += HEADER_SIZE + csz;
     }
 
     fprintf(stderr, "free: Inappropriate pointer (%s:%d)\n", file, line);

@@ -1,0 +1,28 @@
+Radha Ghate rsg169
+Zeal Shah zss37
+
+Notes:
+- Header is a struct with size_t size and int free, total 8 bytes.
+- All allocations rounded up to nearest multiple of 8.
+- Minimum chunk size is 16 bytes (8-byte header + 8-byte payload).
+- free() coalesces forward with adjacent free blocks.
+- Leak detection registered with atexit() on first use.
+
+Test Programs:
+
+mytest.c
+  Runs 5 internal correctness tests: no-overlap between allocations, memory reuse
+  after free, coalescing of freed blocks, out-of-memory returns NULL, and zero-size
+  returns NULL. Run with: ./mytest
+
+Test Plan:
+1. No overlap: allocate multiple objects, write distinct patterns, verify integrity.
+2. Reuse: free memory and confirm a new allocation succeeds.
+3. Coalescing: free multiple adjacent chunks, then allocate a larger block that requires
+   them to be merged.
+4. Request more memory than available, expect NULL return and error message.
+5. Zero-size: malloc(0) returns NULL.
+6. Error detection: errtest.c tests all three free() error cases; each must print the
+   correct message and exit with status 2.
+7. Leak detection: allocate without freeing; at exit the leak message should print.
+8. memgrind: stress test with tasks 1-5 runs 50 times each and reports average time.

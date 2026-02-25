@@ -1,34 +1,39 @@
 CC = gcc
-CFLAGS = -Wall -Werror -g
+CFLAGS = -Wall -Wextra -g
 
-all: memgrind test1 test2 test3
+TESTS = test1 test2 test3 test4 test5 test6 test7 test8
 
-memgrind: memgrind.o mymalloc.o
-	$(CC) $(CFLAGS) -o memgrind memgrind.o mymalloc.o
+all: memgrind memtest $(TESTS)
 
-test1: test1.o mymalloc.o
-	$(CC) $(CFLAGS) -o test1 test1.o mymalloc.o
+memgrind: memgrind.c mymalloc.c mymalloc.h
+	$(CC) $(CFLAGS) -o memgrind memgrind.c mymalloc.c
 
-test2: test2.o mymalloc.o
-	$(CC) $(CFLAGS) -o test2 test2.o mymalloc.o
+memtest: memtest.c mymalloc.c mymalloc.h
+	$(CC) $(CFLAGS) -o memtest memtest.c mymalloc.c
 
-test3: test3.o mymalloc.o
-	$(CC) $(CFLAGS) -o test3 test3.o mymalloc.o
+test1: test1.c mymalloc.c mymalloc.h
+	$(CC) $(CFLAGS) -o test1 test1.c mymalloc.c
 
-mymalloc.o: mymalloc.c mymalloc.h
-	$(CC) $(CFLAGS) -c mymalloc.c
+test2: test2.c mymalloc.c mymalloc.h
+	$(CC) $(CFLAGS) -o test2 test2.c mymalloc.c
 
-memgrind.o: memgrind.c mymalloc.h
-	$(CC) $(CFLAGS) -c memgrind.c
+test3: test3.c mymalloc.c mymalloc.h
+	$(CC) $(CFLAGS) -o test3 test3.c mymalloc.c
 
-test1.o: test1.c mymalloc.h
-	$(CC) $(CFLAGS) -c test1.c
+test4: test4.c mymalloc.c mymalloc.h
+	$(CC) $(CFLAGS) -o test4 test4.c mymalloc.c
 
-test2.o: test2.c mymalloc.h
-	$(CC) $(CFLAGS) -c test2.c
+test5: test5.c mymalloc.c mymalloc.h
+	$(CC) $(CFLAGS) -o test5 test5.c mymalloc.c
 
-test3.o: test3.c mymalloc.h
-	$(CC) $(CFLAGS) -c test3.c
+test6: test6.c mymalloc.c mymalloc.h
+	$(CC) $(CFLAGS) -o test6 test6.c mymalloc.c
+
+test7: test7.c mymalloc.c mymalloc.h
+	$(CC) $(CFLAGS) -o test7 test7.c mymalloc.c
+
+test8: test8.c mymalloc.c mymalloc.h
+	$(CC) $(CFLAGS) -o test8 test8.c mymalloc.c
 
 clean:
-	rm -f *.o memgrind test1 test2 test3
+	rm -f memgrind memtest $(TESTS)
