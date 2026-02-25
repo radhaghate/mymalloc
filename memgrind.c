@@ -3,6 +3,11 @@
 #include <sys/time.h>
 #include "mymalloc.h"
 
+struct Node {
+    int data;
+    struct Node* next;
+};
+
 void run_workloads() {
     for (int i = 0; i < 120; i++) {
         void *ptr = malloc(1);
@@ -34,6 +39,33 @@ void run_workloads() {
     }
     for (int i = 0; i < current_allocs; i++) {
         free(random_ptrs[i]);
+    }
+
+    struct Node* head = NULL;
+    for (int i = 0; i < 100; i++) {
+        struct Node* new_node = malloc(sizeof(struct Node));
+        if (new_node != NULL) {
+            new_node->data = i;
+            new_node->next = head;
+            head = new_node;
+        }
+    }
+    struct Node* curr = head;
+    while (curr != NULL) {
+        struct Node* temp = curr;
+        curr = curr->next;
+        free(temp);
+    }
+
+    void *frag_ptrs[100];
+    for (int i = 0; i < 100; i++) {
+        frag_ptrs[i] = malloc(8);
+    }
+    for (int i = 0; i < 100; i += 2) {
+        if (frag_ptrs[i] != NULL) free(frag_ptrs[i]);
+    }
+    for (int i = 1; i < 100; i += 2) {
+        if (frag_ptrs[i] != NULL) free(frag_ptrs[i]);
     }
 }
 
