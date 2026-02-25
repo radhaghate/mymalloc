@@ -2,13 +2,21 @@
 #include <stdlib.h>
 #include "mymalloc.h"
 
-int main(void) {
-    char *p = malloc(0);
-    if (p == NULL) {
-        printf("PASS: malloc(0) returned NULL\n");
-        return EXIT_SUCCESS;
-    }
-    printf("FAIL: malloc(0) should return NULL\n");
-    free(p);
-    return EXIT_FAILURE;
+// test5.c -- error detection: free() on a stack variable
+//
+// Passes the address of a local int to free().
+// myfree() should print an error to stderr and exit with code 2.
+// If the program prints the last line something is very wrong.
+
+int main() {
+    printf("Test 5: free() on a stack variable\n");
+    printf("  Should print error to stderr and exit with code 2...\n");
+    fflush(stdout);
+
+    int x = 42;
+    free(&x);
+
+    // should never reach here
+    printf("  ERROR: should have exited already\n");
+    return 1;
 }
