@@ -4,12 +4,10 @@
 #include <string.h>
 
 
-// Compile with -DREALMALLOC to use the real malloc() instead of mymalloc()
 #ifndef REALMALLOC
 #include "mymalloc.h"
 #endif
 
-// Compile with -DLEAK to leak memory
 #ifndef LEAK
 #define LEAK 0
 #endif
@@ -25,7 +23,6 @@ main (int argc, char **argv)
 	char *obj[OBJECTS];
 	int i, j, errors = 0;
 	
-	// fill memory with objects
 	for (i = 0; i < OBJECTS; i++) {
 		obj[i] = malloc (OBJSIZE);
 		if (obj[i] == NULL) {
@@ -34,12 +31,10 @@ main (int argc, char **argv)
 		}
 	}
 	
-	// fill each object with distinct bytes
 	for (i = 0; i < OBJECTS; i++) {
 		memset (obj[i], i, OBJSIZE);
 	}
 	
-	// check that all objects contain the correct bytes
 	for (i = 0; i < OBJECTS; i++) {
 		for (j = 0; j < OBJSIZE; j++) {
 			if (obj[i][j] != i) {
@@ -49,7 +44,6 @@ main (int argc, char **argv)
 		}
 	}
 
-	// free all objects
 	if (!LEAK) {
 	    for (i = 0; i < OBJECTS; i++) {
 		free (obj[i]);

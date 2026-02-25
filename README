@@ -1,6 +1,16 @@
 Radha Ghate rsg169
 Zeal Shah zss37
 
-A README file containing the name and netID of both partners, your test plan, descriptions
-of your test programs (including any arguments they may take), and any design notes you
-think are worth pointing out. This should be a plain text file.
+Notes: 
+Design Notes:
+- We made the heap using an array of 4096 bytes. We put it in a union with a double to make sure everything has 8-byte alignment like the instructions said.
+- For the chunk headers we just used a struct with the size of the payload and an int to say if its allocated or free. We didnt use pointers to the next chunk, we just add the size of the current header and payload to jump to the next one.
+- When someone asks for memory, we round the size up to the next multiple of 8 using some bitwise math.
+- Since we cant have an explicit init function, we just check a static int flag at the start of mymalloc and myfree. If its 0, we set up the first big chunk and call atexit() for the leak detector.
+- We decided to do the coalesing inside of myfree() so we don't end up with a bunch of tiny unuseable chunks.
+
+Test Programs:
+- test1.c: Takes no arguments. This just tests basic malloc and free. We allocate a couple blocks, write numbers to them, and check if the numbers are still there to prove the memory doesn't overlap[cite: 169, 170]. Then we free them and allocate a bigger block to make sure adjacent free blocks are coalesced[cite: 174].
+- test2.c: Takes no arguments. Tests the double free error. We allocate something and then call free on it twice to make sure it prints the right error and exits.
+- test3.c: Takes no arguments. Tests what happens if you try to free a pointer that wasn't from malloc (like a local stack variable). It prints the error and exits. 
+- memgrind.c: Takes no arguments. Runs the workload 50 times and prints the average time. It has the 3 required tasks plus two custom ones we made (one does a linked list, the other fragments the memory by freeing alternating pointers).
