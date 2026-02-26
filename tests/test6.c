@@ -3,10 +3,10 @@
 #include "mymalloc.h"
 
 // test6.c -- error detection: free() on a pointer not at the start of a chunk
-//
-// malloc returns a pointer to the start of the payload.
-// Calling free(p + 1) is wrong -- the allocator should catch it,
-// print an error to stderr, and exit with code 2.
+
+/* malloc returns a pointer to the start of the payload.
+    Calling free(p + 1) is wrong so the allocator should catch it,
+    print an error to stderr, and exit with code 2 */
 
 int main() {
     printf("Test 6: free() on a mid-chunk pointer\n");

@@ -3,11 +3,10 @@
 #include "mymalloc.h"
 
 // test7.c -- error detection: double free
-//
-// Frees the same chunk twice using an alias pointer (q = p).
-// This is the exact example from the spec.
-// The second free() should detect that the chunk is already free,
-// print an error to stderr, and exit with code 2.
+
+/* Frees the same chunk twice using an alias pointer (q = p).
+ The second free() should detect that the chunk is already free,
+ print an error to stderr, and exit with code 2 */
 
 int main() {
     printf("Test 7: Double free\n");

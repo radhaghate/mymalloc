@@ -5,7 +5,7 @@
 int main() {
     printf("Test 3: Coalescing adjacent free blocks\n");
 
-    // -- part 1: free in order, then request a chunk bigger than any single one
+    //part 1: free in order, then request a chunk bigger than any single one
     printf("  Testing forward coalesce (free left to right)...\n");
 
     char *a = malloc(48);
@@ -21,7 +21,7 @@ int main() {
     free(b);
     free(c);
 
-    // 3 chunks of 48 bytes freed -- we should be able to get 120+ bytes now
+    // 3 chunks of 48 bytes freed (should be able to get 120+ bytes now)
     char *big = malloc(120);
     if (big == NULL) {
         printf("  ERROR: large alloc after forward coalesce failed\n");
@@ -30,7 +30,7 @@ int main() {
     printf("  Forward coalesce OK\n");
     free(big);
 
-    // -- part 2: free in reverse order
+    //part 2: free in reverse order
     printf("  Testing reverse coalesce (free right to left)...\n");
 
     char *x = malloc(48);
@@ -54,7 +54,7 @@ int main() {
     printf("  Reverse coalesce OK\n");
     free(big);
 
-    // -- part 3: free the middle chunk first, then the outer ones
+    //part 3: free the middle chunk first, then the outer ones
     printf("  Testing coalesce with middle freed first...\n");
 
     char *p1 = malloc(100);
@@ -78,7 +78,7 @@ int main() {
     printf("  Middle-first coalesce OK\n");
     free(big);
 
-    // -- part 4: alternating free (odd indices then even)
+    //part 4: alternating free (odd indices then even)
     printf("  Testing alternating free pattern...\n");
 
     char *ptrs[8];
@@ -93,7 +93,7 @@ int main() {
     for (int i = 1; i < 8; i += 2) free(ptrs[i]);
     for (int i = 0; i < 8; i += 2) free(ptrs[i]);
 
-    // all 8 chunks freed -- should coalesce into one big block
+    // all 8 chunks freed (should coalesce into one big block)
     big = malloc(200);
     if (big == NULL) {
         printf("  ERROR: large alloc after alternating free failed\n");

@@ -6,11 +6,11 @@
 
 #define MEMLENGTH 4096
 #define HEADER_SIZE 8
-#define MIN_CHUNK_SIZE 16  /* header (8) + minimum payload (8) */
+#define MIN_CHUNK_SIZE 16  // header (8) + minimum payload (8)
 
 static union {
     char bytes[MEMLENGTH];
-    double not_used;  /* forces 8-byte alignment on heap.bytes */
+    double not_used;  // force 8-byte alignment on heap.bytes
 } heap;
 
 static int initialized = 0;
@@ -23,7 +23,7 @@ static int initialized = 0;
 #define GET_ALLOC(p)         (*(size_t *)(p) &  (size_t)1)
 #define SET_HEADER(p, sz, a) (*(size_t *)(p) = (sz) | (a))
 
-/* runs at exit, reports any still-allocated chunks */
+// runs at exit, reports any still-allocated chunks
 static void leak_detect(void) {
     int count = 0;
     size_t total = 0;
@@ -50,7 +50,7 @@ static void init_heap(void) {
     atexit(leak_detect);
 }
 
-/* first-fit: returns pointer to chunk header, or NULL */
+// first-fit: returns pointer to chunk header, or NULL
 static char *find_free(size_t size) {
     char *p = heap.bytes;
     char *end = heap.bytes + MEMLENGTH;
@@ -66,7 +66,7 @@ static char *find_free(size_t size) {
     return NULL;
 }
 
-/* split chunk at p into size + leftover, if leftover is big enough to use */
+// split chunk at p into size + leftover (if leftover is big enough to use)
 static void split_chunk(char *p, size_t size) {
     size_t sz = GET_SIZE(p);
     if (sz >= size + MIN_CHUNK_SIZE) {
@@ -76,7 +76,7 @@ static void split_chunk(char *p, size_t size) {
     }
 }
 
-/* merge adjacent free chunks, called after every free */
+// merge adj free chunks, called after every free
 static void coalesce(void) {
     char *p = heap.bytes;
     char *end = heap.bytes + MEMLENGTH;
@@ -98,7 +98,7 @@ static void coalesce(void) {
     }
 }
 
-/* basic bounds + alignment check before doing the full heap walk */
+// set basic bounds + alignment check before doing the full heap walk
 static int in_heap(void *ptr) {
     char *p = (char *)ptr;
     if (p < heap.bytes + HEADER_SIZE || p >= heap.bytes + MEMLENGTH)
@@ -113,7 +113,7 @@ void *mymalloc(size_t size, char *file, int line) {
 
     if (size == 0) return NULL;
 
-    /* keep original for the error message, align the working copy */
+    // keep original for the error message, align the working copy
     size_t orig = size;
     size = (size + 7) & ~(size_t)7;
 
@@ -144,7 +144,7 @@ void myfree(void *ptr, char *file, int line) {
         exit(2);
     }
 
-    /* walk the chunk list to confirm ptr is actually a payload start */
+    // walk the chunk list to confirm ptr is actually a payload start
     char *p = heap.bytes;
     char *end = heap.bytes + MEMLENGTH;
 
@@ -154,7 +154,7 @@ void myfree(void *ptr, char *file, int line) {
 
         if (p + HEADER_SIZE == (char *)ptr) {
             if (!GET_ALLOC(p)) {
-                /* already free — double free */
+                // already free — this is double free
                 fprintf(stderr, "free: Inappropriate pointer (%s:%d)\n", file, line);
                 exit(2);
             }
@@ -166,7 +166,7 @@ void myfree(void *ptr, char *file, int line) {
         p += HEADER_SIZE + sz;
     }
 
-    /* got through the whole heap without finding a matching chunk start */
+    // got through the whole heap without finding a matching chunk start
     fprintf(stderr, "free: Inappropriate pointer (%s:%d)\n", file, line);
     exit(2);
 }

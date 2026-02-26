@@ -28,7 +28,7 @@ int main() {
     }
     printf("  Filled heap with %d objects\n", filled);
 
-    // heap should be full -- next malloc should fail
+    // heap should be full (next malloc should fail)
     printf("  Verifying heap is full...\n");
     char *extra = malloc(8);
     if (extra != NULL) {
@@ -44,7 +44,7 @@ int main() {
         free(ptrs[i]);
     printf("  All freed\n");
 
-    // fill the heap a second time -- must work if free() did its job
+    // fill the heap a second time (must work if free() did its job)
     printf("  Re-filling heap...\n");
     int refilled = 0;
     for (int i = 0; i < filled; i++) {

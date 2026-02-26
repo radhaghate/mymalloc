@@ -11,6 +11,7 @@ static double elapsed_ms(struct timeval start, struct timeval end) {
            (end.tv_usec - start.tv_usec) / 1000.0;
 }
 
+//Task 1: malloc and free a 1-byte object repeatedly 120 times
 static void task1(void) {
     for (int i = 0; i < 120; i++) {
         char *p = malloc(1);
@@ -18,12 +19,14 @@ static void task1(void) {
     }
 }
 
+//Task 2: allocate 120 small objects and then free them all
 static void task2(void) {
     char *ptrs[120];
     for (int i = 0; i < 120; i++) ptrs[i] = malloc(1);
     for (int i = 0; i < 120; i++) free(ptrs[i]);
 }
 
+//Task 3: randomly allocate and free
 static void task3(void) {
     char *ptrs[120];
     int count = 0, total = 0;
@@ -43,12 +46,14 @@ static void task3(void) {
     for (int i = 0; i < count; i++) free(ptrs[i]);
 }
 
+//Task 4: allocate varying small sizes then free in reverse to stress splitting and coalescing
 static void task4(void) {
     char *ptrs[30];
     for (int i = 0; i < 30; i++) ptrs[i] = malloc((i % 8) + 1);
     for (int i = 29; i >= 0; i--) free(ptrs[i]);
 }
 
+//Task 5: queue style usage with intermixed frees and reallocations
 static void task5(void) {
     char *queue[90];
     int head = 0, tail = 0;

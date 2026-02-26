@@ -2,11 +2,10 @@
 #include <stdlib.h>
 #include "mymalloc.h"
 
-// test5.c -- error detection: free() on a stack variable
-//
-// Passes the address of a local int to free().
-// myfree() should print an error to stderr and exit with code 2.
-// If the program prints the last line something is very wrong.
+// test5.c error detection: free() on a stack variable
+
+/* Passes the address of a local int to free().
+    myfree() should print an error to stderr and exit with code 2, never reaching last line */
 
 int main() {
     printf("Test 5: free() on a stack variable\n");

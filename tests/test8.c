@@ -3,14 +3,11 @@
 #include "mymalloc.h"
 
 // test8.c -- leak detection
-//
-// Allocates several objects and intentionally never frees them.
-// When the process exits the atexit() leak detector should fire
-// and print something like:
-//
-//   mymalloc: NNN bytes leaked in 3 objects.
-//
-// Check stderr after running this one.
+
+/* Allocates several objects and intentionally never frees them.
+    When the process exits the atexit() leak detector should fire and print something like:
+   mymalloc: NNN bytes leaked in 3 objects
+*/
 
 int main() {
     printf("Test 8: Leak detection\n");
