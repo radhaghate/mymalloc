@@ -1,16 +1,175 @@
-Radha Ghate rsg169
-Zeal Shah zss37
+Project 1: My little malloc()
+Authors:
+  Radha Ghate ()
+  Zeal Shah ([netID])
 
-Notes: 
-Design Notes:
-- We made the heap using an array of 4096 bytes. We put it in a union with a double to make sure everything has 8-byte alignment like the instructions said.
-- For the chunk headers we just used a struct with the size of the payload and an int to say if its allocated or free. We didnt use pointers to the next chunk, we just add the size of the current header and payload to jump to the next one.
-- When someone asks for memory, we round the size up to the next multiple of 8 using some bitwise math.
-- Since we cant have an explicit init function, we just check a static int flag at the start of mymalloc and myfree. If its 0, we set up the first big chunk and call atexit() for the leak detector.
-- We decided to do the coalesing inside of myfree() so we don't end up with a bunch of tiny unuseable chunks.
+------------------------------------------------------------
+Design Notes
+------------------------------------------------------------
 
-Test Programs:
-- test1.c: Takes no arguments. This just tests basic malloc and free. We allocate a couple blocks, write numbers to them, and check if the numbers are still there to prove the memory doesn't overlap[cite: 169, 170]. Then we free them and allocate a bigger block to make sure adjacent free blocks are coalesced[cite: 174].
-- test2.c: Takes no arguments. Tests the double free error. We allocate something and then call free on it twice to make sure it prints the right error and exits.
-- test3.c: Takes no arguments. Tests what happens if you try to free a pointer that wasn't from malloc (like a local stack variable). It prints the error and exits. 
-- memgrind.c: Takes no arguments. Runs the workload 50 times and prints the average time. It has the 3 required tasks plus two custom ones we made (one does a linked list, the other fragments the memory by freeing alternating pointers).
+Header layout
+  Each chunk has an 8-byte header stored as a single size_t.
+  All payload sizes are multiples of 8, so the low 3 bits of
+  the size are always 0. We steal bit 0 as the allocated flag:
+
+      stored_value = payload_size | alloc_flag
+
+  GET_SIZE masks the low bits off. GET_ALLOC reads bit 0.
+  This keeps the header exactly 8 bytes, so the minimum chunk
+  size is 16 bytes (8 header + 8 payload).
+
+Allocation
+  We use first-fit: walk the chunk list from the start of the
+  heap and take the first free chunk that is large enough. If
+  the leftover space after carving out the request is at least
+  16 bytes (the minimum chunk size) we split it into a second
+  free chunk. All request sizes are rounded up to the nearest
+  multiple of 8 before the search. If the first scan finds
+  nothing we run a full coalesce pass and try one more time.
+
+Coalescing
+  free() always runs a full forward-coalesce pass after marking
+  a chunk free. This merges consecutive free chunks into one
+  regardless of the order they were freed in. malloc() also
+  triggers a coalesce pass as a last resort before giving up
+  and returning NULL.
+
+Error detection
+  myfree() validates the pointer before touching any chunk:
+    1. Pointer must be inside the heap bounds
+    2. Pointer must be 8-byte aligned
+    3. Heap walk must confirm it lands exactly at a chunk
+       payload start (catches mid-chunk pointers)
+    4. That chunk must be currently allocated (catches
+       double-frees)
+  All four checks print to stderr and call exit(2) on failure.
+
+Leak detection
+  init_heap() registers leak_detect() with atexit(). When the
+  process exits, leak_detect() walks the heap, counts chunks
+  that are still allocated, and prints the total byte count
+  and object count to stderr.
+
+------------------------------------------------------------
+Test Plan
+------------------------------------------------------------
+
+memtest.c  (provided)
+  Allocates exactly 64 objects that fill the 4096-byte heap,
+  writes a distinct byte pattern to each one, and checks that
+  no object was overwritten by a neighbor. Run with -DLEAK to
+  skip the frees and trigger the leak detector.
+
+  Expected:  ./memtest       -> "0 incorrect bytes"
+             ./memtest-leak  -> leak report on stderr
+
+memgrind.c  (stress and timing)
+  Runs 5 workloads 50 times each and prints the average time
+  per run. All tasks free every object they allocate.
+
+  Task 1: malloc and immediately free a 1-byte object, 120 times
+  Task 2: malloc 120 1-byte objects into an array, then free all
+  Task 3: random mix of malloc and free until 120 total
+          allocations, then free whatever remains
+  Task 4: allocate 30 objects of varying sizes (1-8 bytes),
+          then free them in reverse order
+  Task 5: queue simulation -- fill 60 slots, then repeatedly
+          dequeue from the front and enqueue at the back
+
+  Expected:  ./memgrind  -> timing output for all 5 tasks,
+                            no errors on stderr
+
+tests/test1.c  -- allocation and data integrity
+  Allocates objects of size 8, 16, 32, and 64 bytes. Checks
+  that every returned pointer is 8-byte aligned. Writes a
+  distinct byte pattern to each object and verifies that no
+  object was corrupted by a neighbor. Also tests alloc-after-
+  free, malloc(0) returning NULL, and free(NULL) being a no-op.
+
+  Expected:  ./test1  -> "Test 1 passed!"
+
+tests/test2.c  -- free() releases memory for reuse
+  Fills the entire heap with 128 objects, confirms the next
+  malloc fails (heap is full), frees everything, then fills
+  the heap a second time. If free() doesn't actually release
+  memory the second fill will fail immediately. Also checks
+  data integrity of the second fill.
+
+  Expected:  ./test2  -> "Test 2 passed!"
+
+tests/test3.c  -- coalescing
+  Frees the same set of chunks in four different orders:
+  left-to-right, right-to-left, middle-first, and alternating.
+  After each pattern it requests a block larger than any single
+  freed chunk. This only succeeds if adjacent free chunks were
+  properly merged.
+
+  Expected:  ./test3  -> "Test 3 passed!"
+
+tests/test4.c  -- edge cases
+  Checks that malloc(10000) returns NULL (bigger than the heap),
+  that malloc(4096) returns NULL (no room for the header), that
+  non-multiples-of-8 request sizes are handled without crashing,
+  that all returned pointers are 8-byte aligned across sizes
+  1-16, and that 20 repeated alloc/free cycles leave the heap
+  consistent.
+
+  Expected:  ./test4  -> "Test 4 passed!"
+
+tests/test5.c  -- error: free() on a stack variable
+  Calls free(&x) where x is a local int. The address is outside
+  the heap so myfree() catches it on the bounds check.
+
+  Expected:  ./test5  -> error on stderr, exit code 2
+
+tests/test6.c  -- error: free() on a mid-chunk pointer
+  Allocates an int array and calls free(p + 1). The pointer is
+  4 bytes past the payload start, not at any chunk boundary.
+
+  Expected:  ./test6  -> error on stderr, exit code 2
+
+tests/test7.c  -- error: double free
+  Allocates one block, stores the pointer in both p and q,
+  frees p, then frees q. The second free hits a chunk that is
+  already marked free.
+
+  Expected:  ./test7  -> error on stderr, exit code 2
+
+tests/test8.c  -- leak detection
+  Allocates three objects (100, 200, 50 bytes) and never frees
+  them. The atexit() leak detector reports them at exit.
+
+  Expected:  ./test8  -> exits 0; stderr shows
+                         "mymalloc: NNN bytes leaked in 3 objects."
+
+------------------------------------------------------------
+Running the tests
+------------------------------------------------------------
+
+  make                 # compile everything
+
+  ./memtest            # 0 incorrect bytes
+  ./memgrind           # timing output for all 5 tasks
+  ./test1              # Test 1 passed!
+  ./test2              # Test 2 passed!
+  ./test3              # Test 3 passed!
+  ./test4              # Test 4 passed!
+  ./test8              # check stderr for leak report
+
+  make test            # run all of the above together
+
+  # these exit with code 2 -- run separately or via:
+  make test-errors
+  ./test5              # free() on stack variable
+  ./test6              # free() on mid-chunk pointer
+  ./test7              # double free
+
+------------------------------------------------------------
+Expected results summary
+------------------------------------------------------------
+
+  memtest:        "0 incorrect bytes"
+  memgrind:       timing lines for all 5 tasks, no stderr output
+  test1-test4:    "Test N passed!"
+  test8:          "mymalloc: NNN bytes leaked in 3 objects." on stderr
+  test5,6,7:      "free: Inappropriate pointer ..." on stderr, exit 2
