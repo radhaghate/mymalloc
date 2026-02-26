@@ -14,10 +14,6 @@ all: memtest memgrind test1 test2 test3 test4 test5 test6 test7 test8
 memtest: memtest.c $(MYMALLOC_SRC) $(MYMALLOC_HDR)
 	$(CC) $(CFLAGS) -I$(INCDIR) -o memtest memtest.c $(MYMALLOC_SRC)
 
-# memtest with leak detection enabled
-memtest-leak: memtest.c $(MYMALLOC_SRC) $(MYMALLOC_HDR)
-	$(CC) $(CFLAGS) -I$(INCDIR) -DLEAK -o memtest-leak memtest.c $(MYMALLOC_SRC)
-
 # memtest using real malloc to verify the test itself is valid
 memtest-real: memtest.c
 	$(CC) $(CFLAGS) -DREALMALLOC -o memtest-real memtest.c
@@ -58,9 +54,6 @@ test: all
 	@echo "=== memtest ==="
 	./memtest
 	@echo ""
-	@echo "=== memtest-leak (check stderr) ==="
-	./memtest-leak
-	@echo ""
 	@echo "=== test1: allocation and data integrity ==="
 	./test1
 	@echo ""
@@ -73,7 +66,7 @@ test: all
 	@echo "=== test4: edge cases ==="
 	./test4
 	@echo ""
-	@echo "=== test8: leak detection (check stderr) ==="
+	@echo "=== test8: leak detection ==="
 	./test8
 	@echo ""
 	@echo "=== memgrind ==="
@@ -93,7 +86,7 @@ test-errors: test5 test6 test7
 	-./test7
 
 clean:
-	rm -f memtest memtest-leak memtest-real memgrind \
+	rm -f memtest memtest-real memgrind \
 	      test1 test2 test3 test4 test5 test6 test7 test8 *.o
 
 .PHONY: all test test-errors clean

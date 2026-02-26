@@ -1,11 +1,10 @@
 Project 1: My little malloc()
 Authors:
-  Radha Ghate ()
-  Zeal Shah ([netID])
+  Radha Ghate (rsg169)
+  Zeal Shah (zss37)
 
 ------------------------------------------------------------
 Design Notes
-------------------------------------------------------------
 
 Header layout
   Each chunk has an 8-byte header stored as a single size_t.
@@ -45,14 +44,13 @@ Error detection
   All four checks print to stderr and call exit(2) on failure.
 
 Leak detection
-  init_heap() registers leak_detect() with atexit(). When the
+  init_heap() registers leak_detect() with atexit(). When the 
   process exits, leak_detect() walks the heap, counts chunks
   that are still allocated, and prints the total byte count
   and object count to stderr.
 
 ------------------------------------------------------------
 Test Plan
-------------------------------------------------------------
 
 memtest.c  (provided)
   Allocates exactly 64 objects that fill the 4096-byte heap,
@@ -144,7 +142,6 @@ tests/test8.c  -- leak detection
 
 ------------------------------------------------------------
 Running the tests
-------------------------------------------------------------
 
   make                 # compile everything
 
@@ -166,7 +163,6 @@ Running the tests
 
 ------------------------------------------------------------
 Expected results summary
-------------------------------------------------------------
 
   memtest:        "0 incorrect bytes"
   memgrind:       timing lines for all 5 tasks, no stderr output
